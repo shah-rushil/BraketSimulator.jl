@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../amazon-braket-simulator-v2-python"
+		}
+	],
+	"settings": {}
+}

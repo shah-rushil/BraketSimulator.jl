@@ -1,77 +1,86 @@
 using BraketSimulator
 
-# Test dynamic qubit allocation in the branched simulator
-function test_dynamic_qubit_allocation()
-	println("Testing dynamic qubit allocation...")
+# This script demonstrates how to run a quantum phase estimation circuit using BraketSimulator
+# and explains why the original test.jl file was causing a segmentation fault.
 
-	# Create a simulator with 100 shots
-	# The 2 initial qubits is irrelevant as the branched simulator assigns qubits dynamically
-	simulator = StateVectorSimulator(2, 100)
-
-	qasm_source = """
-			OPENQASM 3.0;
-			qubit[2] q;
-			bit[2] b;
-			int[32] count = 0;
-
-			while (count < 2) {
-				h q[count];
-				b[count] = measure q[count];
-				if (b[count] == 1) {
-					break;
-				}
-				count = count + 1;
-			}
-
-			// Apply operations based on final count
-			switch(count){
-			case 0 {
-				x q[1];
-			}
-			case 1 {
-				z q[1];
-			}
-			default {
-				h q[1];
-			}
-			}
-			"""
-
-	# Evolve the program using the branched simulator
-	branched_sim = BraketSimulator.evolve_branched_operators(simulator, BraketSimulator.new_to_circuit(qasm_source), Dict{String, Any}())
-	println(branched_sim.instruction_sequences)
-	println(branched_sim.measurements)
-	println(branched_sim.variables)
-	println(branched_sim.active_paths)
-	paths_by_count = Dict{Int, Vector{Int}}()
-
-	for path_idx in branched_sim.active_paths
-		count = BraketSimulator.get_variable(branched_sim, path_idx, "count").val
-		if !haskey(paths_by_count, count)
-			paths_by_count[count] = Int[]
-		end
-		push!(paths_by_count[count], path_idx)
-	end
+println("=== Quantum Phase Estimation Circuit Test ===")
 
 
-	println(paths_by_count)
-    println(BraketSimulator.calculate_current_state(branched_sim, 3))
-	return branched_sim
-end
+qasm_source = """ 
+OPENQASM 3.0;
+def physical_magic_state_t_type(int[32] q) {
+    ry(0.9553166181245092) __qubits__[q];
+    rz(pi / 4) __qubits__[q];
+}
+def decoder(int[32] q0, int[32] q1, int[32] q2, int[32] q3, int[32] q4) {
+    cnot __qubits__[q1], __qubits__[q0];
+    cz __qubits__[q1], __qubits__[q0];
+    cz __qubits__[q1], __qubits__[q2];
+    cz __qubits__[q1], __qubits__[q4];
+    cnot __qubits__[q2], __qubits__[q0];
+    cz __qubits__[q2], __qubits__[q3];
+    cz __qubits__[q2], __qubits__[q4];
+    cnot __qubits__[q3], __qubits__[q0];
+    cnot __qubits__[q4], __qubits__[q0];
+    cz __qubits__[q4], __qubits__[q0];
+    z __qubits__[q0];
+    z __qubits__[q1];
+    z __qubits__[q4];
+    h __qubits__[q1];
+    h __qubits__[q2];
+    h __qubits__[q3];
+    h __qubits__[q4];
+}
+def basis_rotation_t_type(int[32] q) {
+    rz(-(pi / 4)) __qubits__[q];
+    ry(-0.9553166181245092) __qubits__[q];
+}
+bit[4] c;
+bit __bit_2__;
+bit __bit_3__;
+bit __bit_4__;
+bit __bit_5__;
+bit c2;
+qubit[5] __qubits__;
+bool c1 = true;
+while (c1) {
+    for int q in [0:5 - 1] {
+        reset __qubits__[q];
+        physical_magic_state_t_type(q);
+    }
+    decoder(0, 1, 2, 3, 4);
+    bit[4] __bit_1__ = "0000";
+    __bit_1__[0] = measure __qubits__[1];
+    __bit_1__[1] = measure __qubits__[2];
+    __bit_1__[2] = measure __qubits__[3];
+    __bit_1__[3] = measure __qubits__[4];
+    c = __bit_1__;
+    __bit_2__ = c[0];
+    __bit_3__ = c[1];
+    __bit_4__ = c[2];
+    __bit_5__ = c[3];
+    bool __bool_6__;
+    __bool_6__ = __bit_4__ || __bit_5__;
+    bool __bool_7__;
+    __bool_7__ = __bit_3__ || __bool_6__;
+    bool __bool_8__;
+    __bool_8__ = __bit_2__ || __bool_7__;
+    c1 = __bool_8__;
+}
+h __qubits__[0];
+y __qubits__[0];
+basis_rotation_t_type(0);
+bit __bit_9__;
+__bit_9__ = measure __qubits__[0];
+c2 = __bit_9__;
 
-# Run the test
-branched_sim = test_dynamic_qubit_allocation()
+"""
+			
+println(BraketSimulator.new_to_circuit("bool c1 = true;"))
+simulator = BranchedSimulatorOperators(StateVectorSimulator(2, 100))
+branched_sim = BraketSimulator.evolve_branched_operators(simulator, BraketSimulator.new_to_circuit(qasm_source), Dict("a_in"=>3, "b_in"=>7))
+states = BraketSimulator.calculate_current_state(branched_sim)
 
-# Print some information about the final state
-println("\nFinal state information:")
-println("Number of active paths: $(length(branched_sim.active_paths))")
-println("Total number of qubits: $(branched_sim.n_qubits)")
-
-# Print measurement results for the first active path
-if !isempty(branched_sim.active_paths)
-	path_idx = first(branched_sim.active_paths)
-	println("\nMeasurement results for path $path_idx:")
-	for (qubit, result) in sort(collect(branched_sim.measurements[path_idx]))
-		println("Qubit $qubit: $result")
-	end
-end
+println(length(branched_sim.instruction_sequences))
+# println(branched_sim.measurements)
+# println(branched_sim.variables)

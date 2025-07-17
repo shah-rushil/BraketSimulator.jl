@@ -130,52 +130,6 @@ end
 
 
 """
-	evaluate_binary_op(op::Symbol, lhs, rhs)
-
-Evaluate binary operations. This is a direct copy of the visitor's function.
-"""
-function evaluate_binary_op(op::Symbol, lhs, rhs)
-	if op == Symbol("||") || op == Symbol("&&")
-		lhs = lhs > 0
-		rhs = rhs > 0
-	end
-
-	op == :< && return lhs < rhs
-	op == :> && return lhs > rhs
-	op == :<= && return lhs <= rhs
-	op == :>= && return lhs >= rhs
-	op == Symbol("=") && return rhs
-	op == Symbol("!=") && return lhs != rhs
-	op == Symbol("==") && return lhs == rhs
-	op == :+ && return lhs + rhs
-	op == :- && return lhs - rhs
-	op == :* && return lhs * rhs
-	op == :/ && return lhs / rhs
-	op == :% && return lhs % rhs
-	op == Symbol("<<") && return lhs << rhs
-	op == Symbol(">>") && return lhs >> rhs
-	op == Symbol("**") && return lhs ^ rhs
-	op == Symbol("&&") && return lhs && rhs
-	op == Symbol("||") && return lhs || rhs
-	op == :| && return lhs .| rhs
-	op == :& && return lhs .& rhs
-	op == :^ && return lhs .⊻ rhs
-	error("Unknown binary operator: $op")
-end
-
-"""
-	evaluate_unary_op(op::Symbol, arg)
-
-Evaluate unary operations. This is a direct copy of the visitor's function.
-"""
-function evaluate_unary_op(op::Symbol, arg)
-	op == :! && return !arg
-	op == :~ && return .!arg
-	op == :- && return -arg
-	error("Unknown unary operator: $op")
-end
-
-"""
 	evaluate_modifiers(sim::BranchedSimulator, expr::QasmExpression)
 
 Evaluate gate modifiers. This replaces the visitor's evaluate_modifiers function.
